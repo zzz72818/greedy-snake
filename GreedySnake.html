@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Greedy Snake｜離線貪食蛇</title>
+  <style>
+    :root{--ink:#17231d;--paper:#f5f1e8;--lime:#b9f328;--lime-dark:#8aca13;--screen:#dfe3c4;--food:#ff6b49}
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{color:var(--ink);background:radial-gradient(circle at 12% 15%,rgba(185,243,40,.18),transparent 26rem),linear-gradient(rgba(23,35,29,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(23,35,29,.035) 1px,transparent 1px),var(--paper);background-size:auto,32px 32px,32px 32px,auto;font-family:"Arial Narrow","Microsoft JhengHei",Arial,sans-serif}
+    button{font:inherit;color:inherit}
+    .shell{width:min(1180px,calc(100% - 40px));min-height:100vh;margin:auto;display:grid;grid-template-columns:.8fr 1.2fr;align-items:center;gap:clamp(40px,8vw,110px);padding:50px 0}
+    .eyebrow{display:flex;align-items:center;gap:9px;margin-bottom:24px;font:800 12px monospace;letter-spacing:.18em}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--lime-dark);box-shadow:0 0 0 5px rgba(138,202,19,.15)}
+    h1{margin:0;font-size:clamp(70px,9vw,126px);font-weight:950;line-height:.72;letter-spacing:-.085em;transform:scaleX(.82);transform-origin:left}
+    h1 span{color:var(--lime-dark);-webkit-text-stroke:2px var(--ink);text-shadow:5px 5px 0 var(--ink)}
+    .intro p{margin:42px 0 30px;color:#5c675f;line-height:1.8;letter-spacing:.04em}
+    .keys{text-align:left;color:#7a817c;font-size:11px;letter-spacing:.08em}
+    kbd{display:inline-grid;width:35px;height:35px;place-items:center;margin:2px;border:1px solid #8c938f;border-bottom-width:3px;border-radius:6px;background:#ffffff80;font:700 12px monospace}
+    .card{width:min(100%,610px);padding:18px;border:2px solid var(--ink);border-radius:28px;background:#e9e6da;box-shadow:12px 14px 0 var(--ink),0 24px 70px #17231d2e}
+    .scorebar{min-height:72px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding:3px 12px 14px}
+    .scorebox{display:flex;flex-direction:column}.best{text-align:right}.label{color:#727a74;font-size:10px;font-weight:800;letter-spacing:.16em}.score{font:900 30px monospace;letter-spacing:-.08em}
+    .badge{padding:7px 11px;border-radius:999px;background:var(--ink);color:var(--lime);font:800 10px monospace;letter-spacing:.1em}
+    .board-wrap{position:relative;aspect-ratio:1;overflow:hidden;border:2px solid var(--ink);border-radius:16px;background:var(--screen);box-shadow:inset 0 0 45px #2034211a;touch-action:none}
+    canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+    .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#dfe3c4c7;backdrop-filter:blur(3px)}
+    .overlay[hidden]{display:none}.state{font:950 clamp(34px,7vw,62px) monospace;letter-spacing:-.08em}
+    .primary{cursor:pointer;padding:13px 26px;border:2px solid var(--ink);border-radius:999px;background:var(--lime);box-shadow:4px 5px 0 var(--ink);font-weight:900}
+    .primary:active{transform:translate(3px,3px);box-shadow:1px 2px 0 var(--ink)}
+    .controls{display:flex;align-items:end;justify-content:space-between;gap:20px;padding:16px 4px 0}
+    .dpad{display:none;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,40px);gap:3px}
+    .dpad button{cursor:pointer;border:1px solid var(--ink);border-radius:7px;background:#f4f1e8;font-weight:900;font-size:20px;touch-action:none}
+    .dpad button:first-child{grid-column:2}.dpad button:nth-child(2){grid-column:1}
+    .pause{cursor:pointer;margin-left:auto;padding:9px 10px 9px 14px;border:1px solid #17231d59;border-radius:8px;background:transparent;color:#555f58;font-size:11px;font-weight:800;letter-spacing:.12em}
+    .pause span{margin-left:8px;padding:4px 7px;border-radius:4px;background:var(--ink);color:white;font:700 9px monospace}.pause:disabled{cursor:not-allowed;opacity:.4}
+    .offline{margin-top:18px;color:#747c76;font:700 10px monospace;letter-spacing:.1em;text-align:center}
+    @media(max-width:820px){.shell{grid-template-columns:1fr;gap:34px;padding:35px 0 50px}.intro{text-align:center}.eyebrow{justify-content:center}h1{transform-origin:center;font-size:clamp(68px,20vw,110px)}.intro p{margin-top:34px}.keys{display:none}.card{margin:auto;box-shadow:8px 9px 0 var(--ink)}.dpad{display:grid}}
+    @media(max-width:480px){.shell{width:min(100% - 22px,1180px)}.card{padding:10px;border-radius:20px}.scorebar{min-height:58px;padding-inline:5px;gap:8px}.score{font-size:23px}.badge{padding:6px 8px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="intro" aria-labelledby="title">
+      <div class="eyebrow"><span class="dot"></span>OFFLINE ARCADE · READY</div>
+      <h1 id="title">GREEDY<br><span>SNAKE</span></h1>
+      <p>吃下果實、拉長身體，別讓野心撞上自己。<br>你能撐過幾回合？</p>
+      <div class="keys" aria-hidden="true"><kbd>W</kbd><br><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>　或方向鍵移動</div>
+    </section>
+
+    <section class="card" aria-label="離線貪食蛇遊戲">
+      <header class="scorebar">
+        <div class="scorebox"><span class="label">目前分數</span><strong class="score" id="score">000</strong></div>
+        <span class="badge">ROUND 01</span>
+        <div class="scorebox best"><span class="label">最高紀錄</span><strong class="score" id="highScore">000</strong></div>
+      </header>
+
+      <div class="board-wrap" id="board" tabindex="0" aria-label="遊戲盤">
+        <canvas id="canvas" width="600" height="600"></canvas>
+        <div class="overlay" id="overlay">
+          <span class="state" id="stateText">READY?</span>
+          <button class="primary" id="startButton" type="button">開始遊戲</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="dpad" aria-label="觸控方向鍵">
+          <button type="button" data-direction="up" aria-label="向上">↑</button>
+          <button type="button" data-direction="left" aria-label="向左">←</button>
+          <button type="button" data-direction="down" aria-label="向下">↓</button>
+          <button type="button" data-direction="right" aria-label="向右">→</button>
+        </div>
+        <button class="pause" id="pauseButton" type="button" disabled>暫停 <span>SPACE</span></button>
+      </div>
+      <div class="offline">NO INTERNET REQUIRED · 所有資料只保存在此裝置</div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    // ===== CONFIG：最常調整的遊戲設定 =====
+    const CONFIG = { boardSize: 20, tickMs: 115, pointsPerFood: 10 };
+    const VECTORS = {
+      up: { x: 0, y: -1 }, down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
+    };
+    const OPPOSITE = { up: "down", down: "up", left: "right", right: "left" };
+    const KEY_DIRECTION = {
+      ArrowUp: "up", w: "up", W: "up",
+      ArrowDown: "down", s: "down", S: "down",
+      ArrowLeft: "left", a: "left", A: "left",
+      ArrowRight: "right", d: "right", D: "right"
+    };
+    const HIGH_SCORE_KEY = "greedy-snake-offline-high-score";
+
+    // ===== DOM 與繪圖設定 =====
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const stateText = document.getElementById("stateText");
+    const startButton = document.getElementById("startButton");
+    const pauseButton = document.getElementById("pauseButton");
+    const scoreElement = document.getElementById("score");
+    const highScoreElement = document.getElementById("highScore");
+    const boardElement = document.getElementById("board");
+    const cellSize = canvas.width / CONFIG.boardSize;
+
+    // ===== 遊戲狀態 =====
+    let snake;
+    let food;
+    let direction;
+    let queuedDirection;
+    let score;
+    let status;
+    let timer = null;
+    let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+
+    function samePoint(a, b) {
+      return a.x === b.x && a.y === b.y;
+    }
+
+    function createFood() {
+      const freeCells = [];
+      for (let y = 0; y < CONFIG.boardSize; y += 1) {
+        for (let x = 0; x < CONFIG.boardSize; x += 1) {
+          if (!snake.some(part => samePoint(part, { x, y }))) freeCells.push({ x, y });
+        }
+      }
+      return freeCells[Math.floor(Math.random() * freeCells.length)] || { x: 0, y: 0 };
+    }
+
+    function resetState() {
+      snake = [{ x: 7, y: 10 }, { x: 6, y: 10 }, { x: 5, y: 10 }];
+      direction = "right";
+      queuedDirection = "right";
+      score = 0;
+      status = "idle";
+      food = createFood();
+      updateScores();
+      drawGame();
+    }
+
+    // ===== 遊戲引擎 =====
+    function changeDirection(requested) {
+      if (OPPOSITE[direction] !== requested) queuedDirection = requested;
+      if (status === "idle") startGame();
+    }
+
+    function advanceGame() {
+      if (status !== "playing") return;
+      direction = queuedDirection;
+      const vector = VECTORS[direction];
+      const head = { x: snake[0].x + vector.x, y: snake[0].y + vector.y };
+      const ate = samePoint(head, food);
+      const bodyToCheck = ate ? snake : snake.slice(0, -1);
+      const hitWall = head.x < 0 || head.y < 0 || head.x >= CONFIG.boardSize || head.y >= CONFIG.boardSize;
+      const hitSelf = bodyToCheck.some(part => samePoint(part, head));
+
+      if (hitWall || hitSelf) {
+        finishGame();
+        return;
+      }
+
+      snake.unshift(head);
+      if (ate) {
+        score += CONFIG.pointsPerFood;
+        food = createFood();
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
+        }
+        updateScores();
+      } else {
+        snake.pop();
+      }
+      drawGame();
+    }
+
+    function startGame() {
+      if (status === "game-over") resetState();
+      status = "playing";
+      overlay.hidden = true;
+      pauseButton.disabled = false;
+      pauseButton.firstChild.nodeValue = "暫停 ";
+      clearInterval(timer);
+      timer = setInterval(advanceGame, CONFIG.tickMs);
+      boardElement.focus();
+    }
+
+    function restartGame() {
+      clearInterval(timer);
+      resetState();
+      startGame();
+    }
+
+    function togglePause() {
+      if (status === "playing") {
+        status = "paused";
+        clearInterval(timer);
+        stateText.textContent = "PAUSED";
+        startButton.textContent = "繼續遊戲";
+        overlay.hidden = false;
+        pauseButton.firstChild.nodeValue = "繼續 ";
+      } else if (status === "paused") {
+        startGame();
+      }
+    }
+
+    function finishGame() {
+      status = "game-over";
+      clearInterval(timer);
+      stateText.textContent = "GAME OVER";
+      startButton.textContent = "再玩一次";
+      overlay.hidden = false;
+      pauseButton.disabled = true;
+    }
+
+    // ===== 畫面更新 =====
+    function updateScores() {
+      scoreElement.textContent = String(score).padStart(3, "0");
+      highScoreElement.textContent = String(highScore).padStart(3, "0");
+      boardElement.setAttribute("aria-label", "遊戲盤，目前分數 " + score);
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+      context.beginPath();
+      context.roundRect(x, y, width, height, radius);
+    }
+
+    function drawGame() {
+      context.fillStyle = "#dfe3c4";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = "rgba(29,52,37,.09)";
+      context.lineWidth = 1;
+      for (let i = 1; i < CONFIG.boardSize; i += 1) {
+        const p = i * cellSize;
+        context.beginPath(); context.moveTo(p, 0); context.lineTo(p, canvas.height); context.stroke();
+        context.beginPath(); context.moveTo(0, p); context.lineTo(canvas.width, p); context.stroke();
+      }
+
+      context.fillStyle = "#ff6b49";
+      context.strokeStyle = "#17231d";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.arc((food.x + .5) * cellSize, (food.y + .54) * cellSize, cellSize * .28, 0, Math.PI * 2);
+      context.fill(); context.stroke();
+      context.beginPath();
+      context.moveTo((food.x + .51) * cellSize, (food.y + .25) * cellSize);
+      context.quadraticCurveTo((food.x + .7) * cellSize, (food.y + .05) * cellSize, (food.x + .76) * cellSize, (food.y + .3) * cellSize);
+      context.stroke();
+
+      snake.forEach((part, index) => {
+        const inset = cellSize * .1;
+        roundedRect(part.x * cellSize + inset, part.y * cellSize + inset, cellSize - inset * 2, cellSize - inset * 2, cellSize * .26);
+        context.fillStyle = index === 0 ? "#d4ff5b" : "#b9f328";
+        context.fill();
+        context.strokeStyle = "#17231d";
+        context.lineWidth = 2;
+        context.stroke();
+        if (index === 0) {
+          context.fillStyle = "#17231d";
+          context.beginPath();
+          context.arc((part.x + .36) * cellSize, (part.y + .42) * cellSize, cellSize * .055, 0, Math.PI * 2);
+          context.arc((part.x + .64) * cellSize, (part.y + .42) * cellSize, cellSize * .055, 0, Math.PI * 2);
+          context.fill();
+        }
+      });
+    }
+
+    // ===== 輸入控制 =====
+    document.addEventListener("keydown", event => {
+      const requested = KEY_DIRECTION[event.key];
+      if (requested) {
+        event.preventDefault();
+        changeDirection(requested);
+      } else if (event.code === "Space") {
+        event.preventDefault();
+        togglePause();
+      }
+    });
+
+    document.querySelectorAll("[data-direction]").forEach(button => {
+      button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        changeDirection(button.dataset.direction);
+      });
+    });
+
+    startButton.addEventListener("click", () => {
+      if (status === "paused") togglePause();
+      else if (status === "game-over") restartGame();
+      else startGame();
+    });
+    pauseButton.addEventListener("click", togglePause);
+
+    highScoreElement.textContent = String(highScore).padStart(3, "0");
+    resetState();
+  </script>
+</body>
+</html>
