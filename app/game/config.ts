@@ -1,8 +1,15 @@
-import type { Direction, Point } from "./types";
+import type { Direction, FoodKind, Point } from "./types";
 
 export const BOARD_SIZE = 20;
 export const TICK_MS = 115;
-export const SCORE_PER_FOOD = 10;
+export const FOOD_TYPES: ReadonlyArray<{
+  kind: FoodKind;
+  points: number;
+  growth: number;
+}> = [
+  { kind: "chicken", points: 10, growth: 1 },
+  { kind: "steak", points: 20, growth: 2 },
+];
 
 export const DIRECTION_VECTOR: Record<Direction, Point> = {
   up: { x: 0, y: -1 },

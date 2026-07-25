@@ -7,19 +7,51 @@ import type { Direction, GameState } from "../game/types";
 
 const HIGH_SCORE_KEY = "greedy-snake-high-score";
 
+function playEatingSound(audio: AudioContext | null) {
+  if (!audio) return;
+  if (audio.state === "suspended") void audio.resume();
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  const now = audio.currentTime;
+
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(440, now);
+  oscillator.frequency.exponentialRampToValueAtTime(680, now + 0.09);
+  gain.gain.setValueAtTime(0.08, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.12);
+}
+
 export function SnakeGame() {
   const [game, setGame] = useState<GameState>(createInitialState);
   const [highScore, setHighScore] = useState(0);
   const boardRef = useRef<HTMLDivElement>(null);
+  const previousScoreRef = useRef(0);
+  const audioRef = useRef<AudioContext | null>(null);
 
-  useEffect(() => {
-    setHighScore(Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0);
+  const ensureAudio = useCallback(() => {
+    audioRef.current ??= new window.AudioContext();
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHighScore(Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const ate = game.score > previousScoreRef.current;
+    previousScoreRef.current = game.score;
+    if (!ate) return;
+    playEatingSound(audioRef.current);
     if (game.score <= highScore) return;
-    setHighScore(game.score);
     localStorage.setItem(HIGH_SCORE_KEY, String(game.score));
+    const timer = window.setTimeout(() => setHighScore(game.score), 0);
+    return () => window.clearTimeout(timer);
   }, [game.score, highScore]);
 
   useEffect(() => {
@@ -29,12 +61,13 @@ export function SnakeGame() {
   }, [game.status]);
 
   const changeDirection = useCallback((direction: Direction) => {
+    ensureAudio();
     setGame((current) => ({
       ...current,
       nextDirection: queueDirection(current.direction, direction),
       status: current.status === "idle" ? "playing" : current.status,
     }));
-  }, []);
+  }, [ensureAudio]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -61,6 +94,7 @@ export function SnakeGame() {
   }, [changeDirection]);
 
   const startOrRestart = () => {
+    ensureAudio();
     setGame({ ...createInitialState(), status: "playing" });
     boardRef.current?.focus();
   };
@@ -108,7 +142,19 @@ export function SnakeGame() {
           ]
             .filter(Boolean)
             .join(" ");
-          return <span className={cellClass} key={index} />;
+          const foodLabel =
+            game.food.kind === "chicken"
+              ? "雞腿，10 分，成長 1 格"
+              : "牛排，20 分，成長 2 格";
+          return (
+            <span
+              className={`${cellClass}${isFood ? ` food-${game.food.kind}` : ""}`}
+              key={index}
+              aria-label={isFood ? foodLabel : undefined}
+            >
+              {isFood ? (game.food.kind === "chicken" ? "🍗" : "🥩") : null}
+            </span>
+          );
         })}
 
         {game.status !== "playing" && (
@@ -125,6 +171,11 @@ export function SnakeGame() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="food-legend" aria-label="食物效果">
+        <span className="food-chicken">🍗 雞腿：10 分・成長 1 格</span>
+        <span className="food-steak">🥩 牛排：20 分・成長 2 格</span>
       </div>
 
       <div className="controls">

@@ -45,3 +45,13 @@ test("standalone game includes the required gameplay controls", async () => {
     assert.ok(html.includes(required), `missing required feature: ${required}`);
   }
 });
+
+test("standalone game includes meat food rewards and eating audio", async () => {
+  const html = await readFile(standaloneFile, "utf8");
+
+  assert.match(html, /kind:\s*"chicken"[\s\S]*points:\s*10[\s\S]*growth:\s*1/);
+  assert.match(html, /kind:\s*"steak"[\s\S]*points:\s*20[\s\S]*growth:\s*2/);
+  assert.match(html, /pendingGrowth/);
+  assert.match(html, /AudioContext/);
+  assert.doesNotMatch(html, /吃下果實/);
+});
