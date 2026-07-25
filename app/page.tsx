@@ -14,7 +14,7 @@ export default function Home() {
           <span>SNAKE</span>
         </h1>
         <p className="intro-copy">
-          吃下果實、拉長身體，別讓野心撞上自己。
+          吃下雞腿與牛排、累積分數，別讓野心撞上自己。
           <br />
           你能撐過幾回合？
         </p>

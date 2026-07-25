@@ -45,7 +45,7 @@
     <section class="intro" aria-labelledby="title">
       <div class="eyebrow"><span class="dot"></span>OFFLINE ARCADE · READY</div>
       <h1 id="title">GREEDY<br><span>SNAKE</span></h1>
-      <p>吃下果實、拉長身體，別讓野心撞上自己。<br>你能撐過幾回合？</p>
+      <p>吃下雞腿與牛排、累積分數，別讓野心撞上自己。<br>你能撐過幾回合？</p>
       <div class="keys" aria-hidden="true"><kbd>W</kbd><br><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>　或方向鍵移動</div>
     </section>
 
@@ -81,7 +81,11 @@
     "use strict";
 
     // ===== CONFIG：最常調整的遊戲設定 =====
-    const CONFIG = { boardSize: 20, tickMs: 115, pointsPerFood: 10 };
+    const CONFIG = { boardSize: 20, tickMs: 115 };
+    const FOOD_TYPES = [
+      { kind: "chicken", points: 10, growth: 1 },
+      { kind: "steak", points: 20, growth: 2 }
+    ];
     const VECTORS = {
       up: { x: 0, y: -1 }, down: { x: 0, y: 1 },
       left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
@@ -113,8 +117,10 @@
     let direction;
     let queuedDirection;
     let score;
+    let pendingGrowth;
     let status;
     let timer = null;
+    let audioContext = null;
     let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
 
     function samePoint(a, b) {
@@ -128,7 +134,9 @@
           if (!snake.some(part => samePoint(part, { x, y }))) freeCells.push({ x, y });
         }
       }
-      return freeCells[Math.floor(Math.random() * freeCells.length)] || { x: 0, y: 0 };
+      const position = freeCells[Math.floor(Math.random() * freeCells.length)] || { x: 0, y: 0 };
+      const type = FOOD_TYPES[Math.floor(Math.random() * FOOD_TYPES.length)] || FOOD_TYPES[0];
+      return { ...position, ...type };
     }
 
     function resetState() {
@@ -136,6 +144,7 @@
       direction = "right";
       queuedDirection = "right";
       score = 0;
+      pendingGrowth = 0;
       status = "idle";
       food = createFood();
       updateScores();
@@ -144,6 +153,7 @@
 
     // ===== 遊戲引擎 =====
     function changeDirection(requested) {
+      ensureAudio();
       if (OPPOSITE[direction] !== requested) queuedDirection = requested;
       if (status === "idle") startGame();
     }
@@ -154,7 +164,8 @@
       const vector = VECTORS[direction];
       const head = { x: snake[0].x + vector.x, y: snake[0].y + vector.y };
       const ate = samePoint(head, food);
-      const bodyToCheck = ate ? snake : snake.slice(0, -1);
+      const growthBudget = pendingGrowth + (ate ? food.growth : 0);
+      const bodyToCheck = growthBudget > 0 ? snake : snake.slice(0, -1);
       const hitWall = head.x < 0 || head.y < 0 || head.x >= CONFIG.boardSize || head.y >= CONFIG.boardSize;
       const hitSelf = bodyToCheck.some(part => samePoint(part, head));
 
@@ -164,21 +175,24 @@
       }
 
       snake.unshift(head);
+      if (growthBudget === 0) snake.pop();
+      pendingGrowth = Math.max(0, growthBudget - 1);
       if (ate) {
-        score += CONFIG.pointsPerFood;
+        const eatenFood = food;
+        score += eatenFood.points;
         food = createFood();
+        playEatingSound(eatenFood.kind);
         if (score > highScore) {
           highScore = score;
           localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
         }
         updateScores();
-      } else {
-        snake.pop();
       }
       drawGame();
     }
 
     function startGame() {
+      ensureAudio();
       if (status === "game-over") resetState();
       status = "playing";
       overlay.hidden = true;
@@ -229,6 +243,28 @@
       context.roundRect(x, y, width, height, radius);
     }
 
+    function ensureAudio() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext && !audioContext) audioContext = new AudioContext();
+    }
+
+    function playEatingSound(kind) {
+      if (!audioContext) return;
+      if (audioContext.state === "suspended") audioContext.resume();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(kind === "steak" ? 520 : 420, now);
+      oscillator.frequency.exponentialRampToValueAtTime(kind === "steak" ? 780 : 640, now + .09);
+      gain.gain.setValueAtTime(.08, now);
+      gain.gain.exponentialRampToValueAtTime(.001, now + .12);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + .12);
+    }
+
     function drawGame() {
       context.fillStyle = "#dfe3c4";
       context.fillRect(0, 0, canvas.width, canvas.height);
@@ -240,16 +276,15 @@
         context.beginPath(); context.moveTo(0, p); context.lineTo(canvas.width, p); context.stroke();
       }
 
-      context.fillStyle = "#ff6b49";
-      context.strokeStyle = "#17231d";
-      context.lineWidth = 3;
-      context.beginPath();
-      context.arc((food.x + .5) * cellSize, (food.y + .54) * cellSize, cellSize * .28, 0, Math.PI * 2);
-      context.fill(); context.stroke();
-      context.beginPath();
-      context.moveTo((food.x + .51) * cellSize, (food.y + .25) * cellSize);
-      context.quadraticCurveTo((food.x + .7) * cellSize, (food.y + .05) * cellSize, (food.x + .76) * cellSize, (food.y + .3) * cellSize);
-      context.stroke();
+      context.save();
+      context.font = `${cellSize * .72}px "Segoe UI Emoji", sans-serif`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.shadowColor = "rgba(23,35,29,.35)";
+      context.shadowOffsetX = 1;
+      context.shadowOffsetY = 2;
+      context.fillText(food.kind === "chicken" ? "🍗" : "🥩", (food.x + .5) * cellSize, (food.y + .54) * cellSize);
+      context.restore();
 
       snake.forEach((part, index) => {
         const inset = cellSize * .1;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -28,5 +29,14 @@ test("renders the Greedy Snake game shell", async () => {
   assert.match(html, /SNAKE/);
   assert.match(html, /目前分數/);
   assert.match(html, /最高紀錄/);
+  assert.match(html, /food-chicken/);
+  assert.match(html, /food-steak/);
+  assert.doesNotMatch(html, /吃下果實/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+
+  const component = await readFile(
+    new URL("../app/components/SnakeGame.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(component, /AudioContext/);
 });
