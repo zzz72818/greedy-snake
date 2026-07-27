@@ -1,29 +1,89 @@
 # Greedy Snake
 
-可長期擴充的網頁版貪食蛇，支援鍵盤、WASD 與手機觸控操作。
+A maintainable, responsive Snake game built with Next.js, TypeScript, and
+vanilla game logic. It supports keyboard, WASD, and touch controls, and includes
+a standalone HTML edition that works completely offline.
 
-## 專案結構
+## Play
+
+- **Online:** [Play Greedy Snake](https://greedy-snake-arcade.poan-tao.chatgpt.site)
+- **Offline:** Download `GreedySnake.html` and open it in any modern browser.
+  No installation or internet connection is required.
+
+## Features
+
+- Classic Snake movement and collision rules
+- Food items with configurable score and growth effects
+- Keyboard, WASD, and mobile touch controls
+- Pause, restart, current score, and locally saved high score
+- Responsive desktop and mobile layout
+- Fully self-contained offline HTML edition
+- Game rules separated from the user interface for easier maintenance
+
+## Controls
+
+| Action | Keyboard |
+| --- | --- |
+| Move | Arrow keys or `W` `A` `S` `D` |
+| Pause / Resume | `Space` |
+| Start / Restart | On-screen button |
+
+Touch direction buttons are available on smaller screens.
+
+## Project Structure
 
 ```text
 app/
-├─ components/       # 畫面元件
-├─ game/             # 純遊戲邏輯、設定與型別
-├─ globals.css       # 視覺樣式
-├─ layout.tsx        # 網站資訊與共用版面
-└─ page.tsx          # 首頁組裝
+├─ components/       # Interactive UI components
+├─ game/             # Game rules, configuration, and types
+├─ globals.css       # Global visual styles
+├─ layout.tsx        # Metadata and shared layout
+└─ page.tsx          # Home page composition
 public/
 └─ assets/
-   ├─ sprites/       # 角色、食物、道具
-   ├─ audio/         # 音效、音樂
-   ├─ backgrounds/   # 背景
-   └─ icons/         # 介面圖示
+   ├─ sprites/       # Characters, food, and item images
+   ├─ audio/         # Sound effects and music
+   ├─ backgrounds/   # Page and board backgrounds
+   └─ icons/         # Interface icons
+GreedySnake.html     # Standalone offline edition
 ```
 
-## 常見調整
+## Local Development
 
-- 棋盤大小、速度、單次得分：`app/game/config.ts`
-- 移動、碰撞、食物生成：`app/game/engine.ts`
-- 畫面互動：`app/components/SnakeGame.tsx`
-- 顏色與版面：`app/globals.css`
+Requirements:
 
-未來若要加關卡、障礙物或特殊食物，請先在 `game/types.ts` 增加資料型別，再把規則放進 `game/engine.ts`，畫面元件只負責顯示。
+- Node.js 22 or newer
+- pnpm
+
+Install dependencies and start the development server:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open the local URL displayed in the terminal.
+
+## Build and Test
+
+```bash
+pnpm build
+node --test tests/*.mjs
+```
+
+## Common Customizations
+
+- Board size, speed, and scoring: `app/game/config.ts`
+- Movement, collision, and food generation: `app/game/engine.ts`
+- Game interface and interactions: `app/components/SnakeGame.tsx`
+- Colors and layout: `app/globals.css`
+- Offline edition: `GreedySnake.html`
+
+When adding levels, obstacles, or new food types, define the data structure in
+`app/game/types.ts`, implement the rules in `app/game/engine.ts`, and keep the
+UI component focused on rendering and input.
+
+## Asset Guidelines
+
+Place new files in the matching folder under `public/assets`. Use lowercase,
+hyphen-separated filenames such as `golden-apple.png` or `eat-food.mp3`.
